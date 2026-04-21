@@ -76,3 +76,4 @@ int hex_to_hash(const char *hex, ObjectID *id_out) {
 
     return 0;
 }
+// cleanup unused warnings
