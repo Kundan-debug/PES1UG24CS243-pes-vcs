@@ -1,4 +1,6 @@
 #include "tree.h"
+#include "object.h"
+#include "index.h"
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -77,5 +79,25 @@ int tree_parse(const void *data, size_t len, Tree *tree_out) {
         tree_out->count++;
     }
 
+    return 0;
+}
+
+int tree_from_index(ObjectID *id_out) {
+    Tree tree;
+    tree.count = 0;
+
+    void *data = NULL;
+    size_t len = 0;
+
+    if (tree_serialize(&tree, &data, &len) != 0) {
+        return -1;
+    }
+
+    if (object_write(OBJ_TREE, data, len, id_out) != 0) {
+        free(data);
+        return -1;
+    }
+
+    free(data);
     return 0;
 }

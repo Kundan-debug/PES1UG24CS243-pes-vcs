@@ -6,6 +6,7 @@
 #include "pes.h"
 #include "object.h"
 #include "commit.h"
+#include "tree.h"
 
 int object_write(ObjectType type, const void *data, size_t size, ObjectID *id_out);
 void hash_to_hex(const ObjectID *id, char *hex_out);
@@ -24,16 +25,44 @@ int commit_create(const char *message, ObjectID *commit_id_out) {
     const char *author = pes_author();
     uint64_t timestamp = time(NULL);
 
+    ObjectID tree_id;
+    if (tree_from_index(&tree_id) != 0) {
+        return -1;
+    }
+
+    char tree_hex[HASH_HEX_SIZE + 1];
+    hash_to_hex(&tree_id, tree_hex);
+
+    FILE *hf_read = fopen(HEAD_FILE, "r");
+
+    char parent_hex[HASH_HEX_SIZE + 1];
+    int has_parent = 0;
+
+    if (hf_read && fgets(parent_hex, sizeof(parent_hex), hf_read)) {
+        parent_hex[strcspn(parent_hex, "\n")] = 0;
+        has_parent = 1;
+    }
+    if (hf_read) fclose(hf_read);
+
+    char parent_line[128] = "";
+
+    if (has_parent) {
+        snprintf(parent_line, sizeof(parent_line), "parent %s\n", parent_hex);
+    }
+
     snprintf(commit_data, sizeof(commit_data),
-             "tree %s\n"
-             "author %s\n"
-             "date %lu\n"
-             "\n"
-             "%s\n",
-             index_data,
-             author,
-             timestamp,
-             message);
+        "tree %s\n"
+        "%s"
+        "author %s\n"
+        "date %lu\n"
+        "\n"
+        "%s\n",
+        tree_hex,
+        parent_line,
+        author,
+        timestamp,
+        message
+    );
 
     size_t total_size = strlen(commit_data);
 
@@ -58,7 +87,25 @@ int commit_parse(const void *data, size_t len, Commit *commit_out) {
 
     memset(commit_out, 0, sizeof(Commit));
 
-    sscanf(ptr, "tree %64s\n", commit_out->tree.hash);
+    char tree_hex[65];
+    sscanf(ptr, "tree %64s\n", tree_hex);
+    hex_to_hash(tree_hex, &commit_out->tree);
+
+    const char *parent_line = strstr(ptr, "parent ");
+    if (parent_line) {
+        
+        char parent_hex[HASH_HEX_SIZE + 1];
+
+        if (sscanf(parent_line, "parent %64s", parent_hex) == 1) {
+             hex_to_hash(parent_hex, &commit_out->parent);
+             commit_out->has_parent = 1;
+        }
+
+        commit_out->has_parent = 1;
+    } else {
+        memset(&commit_out->parent, 0, sizeof(ObjectID));
+        commit_out->has_parent = 0;
+    }
 
     const char *author_line = strstr(ptr, "author ");
     if (author_line) {

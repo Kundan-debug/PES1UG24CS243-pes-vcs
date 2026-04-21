@@ -62,7 +62,7 @@ void cmd_status(void) {
         fprintf(stderr, "error: failed to load index\n");
         return;
     }
-    index_status(&index);
+    index_status();
 }
 
 // Usage: pes commit -m <message>
@@ -98,6 +98,10 @@ static void print_commit(const ObjectID *id, const Commit *commit, void *ctx) {
     char hex[HASH_HEX_SIZE + 1];
     hash_to_hex(id, hex);
     printf("commit %s\n", hex);
+    if (commit->has_parent) {
+        hash_to_hex(&commit->parent, hex);
+        printf("Parent: %s\n", hex);
+    }
     printf("Author: %s\n", commit->author);
     printf("Date:   %llu\n", (unsigned long long)commit->timestamp);
     printf("\n    %s\n\n", commit->message);

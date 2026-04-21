@@ -49,11 +49,11 @@ int index_add(Index *index, const char *filename) {
     return 0;
 }
 
-int index_status(Index *index) {
+void index_status(void) {
     FILE *f = fopen(INDEX_FILE, "r");
     if (!f) {
         printf("No files staged\n");
-        return 0;
+        return;
     }
 
     char line[256];
@@ -62,5 +62,4 @@ int index_status(Index *index) {
     }
 
     fclose(f);
-    return 0;
 }

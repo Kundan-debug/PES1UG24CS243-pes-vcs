@@ -7,6 +7,7 @@
 #ifndef TREE_H
 #define TREE_H
 
+#include "index.h"
 #include "pes.h"
 
 #define MAX_TREE_ENTRIES 1024
