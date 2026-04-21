@@ -37,11 +37,12 @@ void cmd_init(void) {
 // Usage: pes add <file>...
 void cmd_add(int argc, char *argv[]) {
     if (argc < 3) {
-        fprintf(stderr, "Usage: pes add <file>...\n");
+        fprintf(stderr, "Usage: pes add <file>\n");
         return;
     }
 
     Index index;
+
     if (index_load(&index) != 0) {
         fprintf(stderr, "error: failed to load index\n");
         return;
@@ -49,7 +50,7 @@ void cmd_add(int argc, char *argv[]) {
 
     for (int i = 2; i < argc; i++) {
         if (index_add(&index, argv[i]) != 0) {
-            fprintf(stderr, "error: failed to add '%s'\n", argv[i]);
+            fprintf(stderr, "error: failed to add %s\n", argv[i]);
         }
     }
 }
@@ -65,22 +66,30 @@ void cmd_status(void) {
 }
 
 // Usage: pes commit -m <message>
-void cmd_commit(int argc, char *argv[]) {
+int cmd_commit(int argc, char *argv[]) {
     if (argc < 4 || strcmp(argv[2], "-m") != 0) {
-        fprintf(stderr, "error: commit requires a message (-m \"message\")\n");
-        return;
+        fprintf(stderr, "Usage: pes commit -m <message>\n");
+        return 1;
     }
 
     const char *message = argv[3];
-    ObjectID commit_id;
-    if (commit_create(message, &commit_id) != 0) {
-        fprintf(stderr, "error: commit failed\n");
-        return;
+
+    Index index;
+    if (index_load(&index) != 0) {
+        fprintf(stderr, "No staged files\n");
+        return 1;
     }
 
-    char hex[HASH_HEX_SIZE + 1];
-    hash_to_hex(&commit_id, hex);
-    printf("Committed: %.12s... %s\n", hex, message);
+    ObjectID id;
+
+    if (commit_create(message, &id) != 0) {
+        fprintf(stderr, "Commit failed\n");
+        return 1;
+    }
+
+    printf("Committed\n");
+
+    return 0;
 }
 
 // Callback for commit_walk used by cmd_log.
@@ -95,10 +104,8 @@ static void print_commit(const ObjectID *id, const Commit *commit, void *ctx) {
 }
 
 // Usage: pes log
-void cmd_log(void) {
-    if (commit_walk(print_commit, NULL) != 0) {
-        fprintf(stderr, "No commits yet.\n");
-    }
+int cmd_log(void) {
+    return commit_walk(print_commit, NULL);
 }
 
 // ─── PROVIDED: Command dispatch ─────────────────────────────────────────────
